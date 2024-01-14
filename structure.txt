@@ -1,0 +1,9 @@
+model_images;
+    id: uui,
+    filePath: string,
+    addedAt: Date
+
+requests:
+    getAll()
+    add()
+    delete()

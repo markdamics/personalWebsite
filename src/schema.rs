@@ -2,9 +2,9 @@
 
 diesel::table! {
     images (id) {
-        id -> Int4,
-        #[max_length = 140]
-        filepath -> Varchar,
+        id -> Uuid,
+        #[max_length = 255]
+        file_path -> Varchar,
         added_at -> Timestamp,
     }
 }

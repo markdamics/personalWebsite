@@ -1,36 +1,48 @@
-#[macro_use]
 extern crate diesel;
-#[macro_use]
 extern crate diesel_migrations;
 
-use actix_web::{App, HttpServer};
-use dotenv::dotenv;
-use listenfd::ListenFd;
-use std::env;
+use actix_web::{App, get, HttpResponse, HttpServer, Responder, web, Result};
+use serde::Serialize;
 
-mod db;
-mod error_handler;
-mod images;
-mod schema;
+mod api;
+mod models;
+mod image_repository;
+
+#[derive(Serialize)]
+pub struct Response {
+    pub message: String,
+}
+
+#[get("/health")]
+async fn healthcheck() -> impl Responder {
+    let response = Response {
+        message: "Everything is working fine".to_string(),
+    };
+    HttpResponse::Ok().json(response)
+}
+
+async fn not_found() -> Result<HttpResponse> {
+    let response = Response {
+        message: "Resource not found".to_string(),
+    };
+    Ok(HttpResponse::NotFound().json(response))
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-    dotenv().ok();
-    db::init();
+    let image_db = image_repository::database::Database::new();
+    let app_data = web::Data::new(image_db);
 
-    //if ther is a change in the files, the server will restart
-    let mut listenfd = ListenFd::from_env();
-    let mut server = HttpServer::new(|| App::new().configure(images::init_routes));
 
-    server = match listenfd.take_tcp_listener(0)? {
-        Some(listener) => server.listen(listener)?,
-        None => {
-            let host = env::var("HOST").expect("Please set host in .env");
-            let port = env::var("PORT").expect("Please set port in .env");
-            server.bind(format!("{}:{}", host, port))?
-        }
-    };
-
-    server.run().await
+    HttpServer::new(move || {
+        App::new()
+            .app_data(app_data.clone())
+            .configure(api::images::config)
+            .service(healthcheck)
+            .default_service(web::route().to(not_found))
+            .wrap(actix_web::middleware::Logger::default())
+    })
+        .bind("127.0.0.1:80")?
+        .run()
+        .await
 }

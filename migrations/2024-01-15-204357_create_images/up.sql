@@ -1,5 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE images (
-  id uuid NOT NULL PRIMARY KEY,
-  filePath VARCHAR(255) NOT NULL,
-  added_at TIMESTAMP NOT NULL
-)
+    id VARCHAR(255) PRIMARY KEY,
+    file_path VARCHAR NOT NULL,
+    added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    taken_by VARCHAR,
+    taken_where VARCHAR,
+    notes TEXT
+);
